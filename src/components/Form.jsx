@@ -11,6 +11,7 @@ function Form(props) {
     const handleTodoSubmit = (e) => {
         e.preventDefault();
 
+        // eslint-disable-next-line react/prop-types
         props.onSubmit({
             id: Math.floor(Math.random() * 10000),
             text: input

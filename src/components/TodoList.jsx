@@ -57,6 +57,7 @@ function TodoList() {
 }
 
 function Todo(
+    // eslint-disable-next-line react/prop-types
     { todos, completeTodo, removeTodo, updateTodo }) {
     const [edit, setEdit] = useState({
         id: null,
