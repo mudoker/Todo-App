@@ -1,23 +1,25 @@
-import React, { useState, useEffect, useContext, useMemo } from "react";
+import React, { useState, useContext, useMemo, useEffect } from "react";
 import Form from "./Form";
 import { RiCloseCircleLine } from "react-icons/ri";
 import { TiEdit } from "react-icons/ti";
+import { FaCheckCircle } from "react-icons/fa";
 import "../App.css";
-import { CSSTransition, TransitionGroup } from "react-transition-group"; // For animations
 
 const TodosContext = React.createContext([]);
 
 function TodoList() {
-  const [todos, setTodo] = useState(() => {
-    // Load from localStorage on initial render
-    const storedTodos = localStorage.getItem("todos");
-    return storedTodos ? JSON.parse(storedTodos) : [];
-  });
+  const [todos, setTodo] = useState([]);
   const [filter, setFilter] = useState("all");
-  const [lastDeletedTodo, setLastDeletedTodo] = useState(null); // For undo functionality
+  const [lastDeleted, setLastDeleted] = useState(null);
 
+  // Load todos from localStorage on mount
   useEffect(() => {
-    // Save todos to localStorage whenever it changes
+    const savedTodos = JSON.parse(localStorage.getItem("todos"));
+    if (savedTodos) setTodo(savedTodos);
+  }, []);
+
+  // Save todos to localStorage on change
+  useEffect(() => {
     localStorage.setItem("todos", JSON.stringify(todos));
   }, [todos]);
 
@@ -29,15 +31,15 @@ function TodoList() {
 
   const removeTodo = (id) => {
     const removedTodo = todos.find((todo) => todo.id === id);
-    setLastDeletedTodo(removedTodo); // Store the last deleted todo
-    const removeArr = todos.filter((todo) => todo.id !== id);
-    setTodo(removeArr);
+    setLastDeleted(removedTodo);
+    const newTodos = todos.filter((todo) => todo.id !== id);
+    setTodo(newTodos);
   };
 
-  const undoRemoveTodo = () => {
-    if (lastDeletedTodo) {
-      setTodo([lastDeletedTodo, ...todos]);
-      setLastDeletedTodo(null);
+  const undoDelete = () => {
+    if (lastDeleted) {
+      setTodo([lastDeleted, ...todos]);
+      setLastDeleted(null);
     }
   };
 
@@ -56,56 +58,41 @@ function TodoList() {
     setTodo(updatedTodos);
   };
 
-  const filteredTodos = todos.filter((todo) => {
-    if (filter === "completed") return todo.isComplete;
-    if (filter === "active") return !todo.isComplete;
-    return true; // 'all' filter
-  });
+  const filterTodos = (todos, filter) => {
+    return todos.filter((todo) => {
+      if (filter === "all") return true;
+      if (filter === "completed") return todo.isComplete;
+      if (filter === "priority") return todo.priority === "high";
+      return true;
+    });
+  };
+
+  const filteredTodos = useMemo(
+    () => filterTodos(todos, filter),
+    [todos, filter]
+  );
 
   return (
     <div className="todo-app">
-      <h1>Today’s Tasks</h1>
+      <h1>Today's Tasks!</h1>
       <Form onSubmit={addTodo} />
       <div className="filter-buttons">
-        <button
-          onClick={() => setFilter("all")}
-          className={filter === "all" ? "active" : ""}
-        >
-          All
-        </button>
-        <button
-          onClick={() => setFilter("active")}
-          className={filter === "active" ? "active" : ""}
-        >
-          Active
-        </button>
-        <button
-          onClick={() => setFilter("completed")}
-          className={filter === "completed" ? "active" : ""}
-        >
-          Completed
-        </button>
+        <button onClick={() => setFilter("all")}>All</button>
+        <button onClick={() => setFilter("completed")}>Completed</button>
+        <button onClick={() => setFilter("priority")}>High Priority</button>
       </div>
       <TodosContext.Provider value={filteredTodos}>
-        <TransitionGroup className="todo-list">
-          {filteredTodos.map((todo, index) => (
-            <CSSTransition key={todo.id} timeout={500} classNames="todo">
-              <Todo
-                key={index}
-                todo={todo}
-                completeTodo={completeTodo}
-                removeTodo={removeTodo}
-                updateTodo={updateTodo}
-              />
-            </CSSTransition>
-          ))}
-        </TransitionGroup>
+        {filteredTodos.map((todo) => (
+          <Todo
+            key={todo.id}
+            todo={todo}
+            completeTodo={completeTodo}
+            removeTodo={removeTodo}
+            updateTodo={updateTodo}
+          />
+        ))}
       </TodosContext.Provider>
-      {lastDeletedTodo && (
-        <button onClick={undoRemoveTodo} className="undo-button">
-          Undo Last Delete
-        </button>
-      )}
+      {lastDeleted && <button onClick={undoDelete}>Undo Delete</button>}
     </div>
   );
 }
@@ -121,11 +108,16 @@ function Todo({ todo, completeTodo, removeTodo, updateTodo }) {
   if (edit.id) return <Form edit={edit} onSubmit={submitUpdate} />;
 
   return (
-    <div className={todo.isComplete ? "todo-row complete" : "todo-row"}>
-      <div key={todo.id} onClick={() => completeTodo(todo.id)}>
-        {todo.text}
-      </div>
+    <div
+      className={todo.isComplete ? "todo-row complete" : "todo-row"}
+      style={{ borderColor: todo.priority === "high" ? "#ff0000" : "#ffffff" }}
+    >
+      <div key={todo.id}>{todo.text}</div>
       <div className="icons">
+        <FaCheckCircle
+          onClick={() => completeTodo(todo.id)}
+          className="complete-icon"
+        />
         <RiCloseCircleLine
           onClick={() => removeTodo(todo.id)}
           className="delete-icon"
