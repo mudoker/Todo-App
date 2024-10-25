@@ -39,9 +39,15 @@ function Form(props) {
         onChange={handlePriorityChange}
         className="priority-select"
       >
-        <option value="high">High</option>
-        <option value="medium">Medium</option>
-        <option value="low">Low</option>
+        <option style={{ background: "rgba(255, 0, 0, 0.8)" }} value="high">
+          High
+        </option>
+        <option style={{ background: "rgba(255, 255, 0, 0.8)" }} value="medium">
+          Medium
+        </option>
+        <option style={{ background: "rgba(0, 255, 0, 0.8)" }} value="low">
+          Low
+        </option>
       </select>
       <button className="todo-button">Add Task</button>
     </form>
