@@ -1,4 +1,6 @@
-import React, { useState, useContext, useMemo, useEffect } from "react";
+// src/components/TodoList.js
+import React, { useState, useMemo, useEffect } from "react";
+import axiosInstance from "../api/axios";
 import Form from "./Form";
 import { RiCloseCircleLine } from "react-icons/ri";
 import { TiEdit } from "react-icons/ti";
@@ -8,61 +10,87 @@ import "../App.css";
 const TodosContext = React.createContext([]);
 
 function TodoList() {
-  const [todos, setTodo] = useState([]);
+  const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
   const [lastDeleted, setLastDeleted] = useState(null);
 
-  // Load todos from localStorage on mount
+  // Fetch tasks from the backend API on mount
   useEffect(() => {
-    const savedTodos = JSON.parse(localStorage.getItem("todos"));
-    if (savedTodos) setTodo(savedTodos);
+    axiosInstance
+      .get("/tasks")
+      .then((response) => {
+        setTodos(response.data);
+      })
+      .catch((error) => console.error("Error fetching tasks:", error));
   }, []);
 
-  // Save todos to localStorage on change
-  useEffect(() => {
-    localStorage.setItem("todos", JSON.stringify(todos));
-  }, [todos]);
-
   const addTodo = (todo) => {
-    if (!todo.text || /^\s*$/.test(todo.text)) return;
-    const newTodos = [todo, ...todos];
-    setTodo(newTodos);
+    if (!todo.title || /^\s*$/.test(todo.title)) return;
+    axiosInstance
+      .post("/add-task", todo)
+      .then(() => {
+        setTodos((prev) => [todo, ...prev]);
+      })
+      .catch((error) => console.error("Error adding task:", error));
   };
 
   const removeTodo = (id) => {
-    const removedTodo = todos.find((todo) => todo.id === id);
-    setLastDeleted(removedTodo);
-    const newTodos = todos.filter((todo) => todo.id !== id);
-    setTodo(newTodos);
+    axiosInstance
+      .delete(`/delete-task?id=${id}`)
+      .then(() => {
+        const removedTodo = todos.find((todo) => todo.id === id);
+        setLastDeleted(removedTodo);
+        setTodos((prev) => prev.filter((todo) => todo.id !== id));
+      })
+      .catch((error) => console.error("Error deleting task:", error));
   };
 
   const undoDelete = () => {
     if (lastDeleted) {
-      setTodo([lastDeleted, ...todos]);
+      addTodo(lastDeleted);
       setLastDeleted(null);
     }
   };
 
   const updateTodo = (todoId, newValue) => {
-    if (!newValue.text || /^\s*$/.test(newValue.text)) return;
-    setTodo((prev) =>
-      prev.map((item) => (item.id === todoId ? newValue : item))
-    );
+    if (!newValue.title || /^\s*$/.test(newValue.title)) return;
+    axiosInstance
+      .put(`/update-task?id=${todoId}`, newValue)
+      .then(() => {
+        setTodos((prev) =>
+          prev.map((item) => (item.id === todoId ? newValue : item))
+        );
+      })
+      .catch((error) => console.error("Error updating task:", error));
   };
 
   const completeTodo = (id) => {
-    const updatedTodos = todos.map((todo) => {
-      if (todo.id === id) todo.isComplete = !todo.isComplete;
-      return todo;
-    });
-    setTodo(updatedTodos);
+    const updatedTodo = todos.find((todo) => todo.id === id);
+    const updatedStatus = !updatedTodo.completed; // Updated to use 'completed'
+
+    axiosInstance
+      .put(`/update-task?id=${id}`, {
+        // Send updated payload
+        title: updatedTodo.title,
+        completed: updatedStatus, // Updated
+        priority: updatedTodo.priority,
+      })
+      .then(() => {
+        setTodos(
+          (prev) =>
+            prev.map((item) =>
+              item.id === id ? { ...item, completed: updatedStatus } : item
+            ) // Updated
+        );
+      })
+      .catch((error) => console.error("Error completing task:", error));
   };
 
   const filterTodos = (todos, filter) => {
     return todos.filter((todo) => {
       if (filter === "all") return true;
-      if (filter === "completed") return todo.isComplete;
-      if (filter === "priority") return todo.priority === "high";
+      if (filter === "completed") return todo.completed; // Updated
+      if (filter === "priority") return todo.priority === "HIGH";
       return true;
     });
   };
@@ -79,7 +107,7 @@ function TodoList() {
       <div className="filter-buttons">
         <button onClick={() => setFilter("all")}>All</button>
         <button onClick={() => setFilter("completed")}>Completed</button>
-        <button onClick={() => setFilter("priority")}>High Priority</button>
+        <button onClick={() => setFilter("priority")}>HIGH Priority</button>
       </div>
       <TodosContext.Provider value={filteredTodos}>
         {filteredTodos.map((todo) => (
@@ -109,10 +137,10 @@ function Todo({ todo, completeTodo, removeTodo, updateTodo }) {
 
   return (
     <div
-      className={todo.isComplete ? "todo-row complete" : "todo-row"}
-      style={{ borderColor: todo.priority === "high" ? "#ff0000" : "#ffffff" }}
+      className={todo.completed ? "todo-row complete" : "todo-row"} // Updated
+      style={{ borderColor: todo.priority === "HIGH" ? "#ff0000" : "#ffffff" }}
     >
-      <div key={todo.id}>{todo.text}</div>
+      <div key={todo.id}>{todo.title}</div>
       <div className="icons">
         <FaCheckCircle
           onClick={() => completeTodo(todo.id)}
@@ -123,7 +151,7 @@ function Todo({ todo, completeTodo, removeTodo, updateTodo }) {
           className="delete-icon"
         />
         <TiEdit
-          onClick={() => setEdit({ id: todo.id, value: todo.text })}
+          onClick={() => setEdit({ id: todo.id, value: todo.title })}
           className="edit-icon"
         />
       </div>

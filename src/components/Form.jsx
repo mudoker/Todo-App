@@ -3,7 +3,7 @@ import "../App.css";
 
 function Form(props) {
   const [input, setInput] = useState("");
-  const [priority, setPriority] = useState("medium"); // State for task priority
+  const [priority, setPriority] = useState("MEDIUM"); // State for task priority
 
   const handleChange = (event) => {
     setInput(event.target.value);
@@ -18,7 +18,7 @@ function Form(props) {
 
     props.onSubmit({
       id: Math.floor(Math.random() * 10000),
-      text: input,
+      title: input,
       priority,
     });
     setInput("");
@@ -39,13 +39,13 @@ function Form(props) {
         onChange={handlePriorityChange}
         className="priority-select"
       >
-        <option style={{ background: "rgba(255, 0, 0, 0.8)" }} value="high">
+        <option style={{ background: "rgba(255, 0, 0, 0.8)" }} value="HIGH">
           High
         </option>
-        <option style={{ background: "rgba(255, 255, 0, 0.8)" }} value="medium">
+        <option style={{ background: "rgba(255, 255, 0, 0.8)" }} value="MEDIUM">
           Medium
         </option>
-        <option style={{ background: "rgba(0, 255, 0, 0.8)" }} value="low">
+        <option style={{ background: "rgba(0, 255, 0, 0.8)" }} value="LOW">
           Low
         </option>
       </select>
